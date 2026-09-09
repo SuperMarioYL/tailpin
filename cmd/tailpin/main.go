@@ -196,8 +196,10 @@ func runDiffCmd(args []string, out io.Writer, color bool) error {
 // diffSessions resolves the two sessions to compare (under root) and prints
 // their claim-level diff.
 func diffSessions(root, storeDir string, args []string, out io.Writer, color bool) error {
-	if len(args) > 2 {
-		return errors.New("usage: tailpin diff [idA idB]")
+	// Validate the argument count before any discovery: a usage error must
+	// not depend on whether the sessions root exists on this machine.
+	if len(args) != 0 && len(args) != 2 {
+		return errors.New("usage: tailpin diff [idA idB] — pass either no session IDs or two")
 	}
 	refs, err := transcript.Sessions(root)
 	if err != nil {
@@ -224,8 +226,6 @@ func diffSessions(root, storeDir string, args []string, out io.Writer, color boo
 		if err != nil {
 			return err
 		}
-	case 1:
-		return errors.New("diff needs either no session IDs or two: tailpin diff [idA idB]")
 	}
 
 	store, err := pin.NewStore(storeDir)

@@ -383,6 +383,10 @@ func TestDiffPrefersStoredArtifactOverExtraction(t *testing.T) {
 }
 
 func TestRunDiffUsageErrors(t *testing.T) {
+	// Usage errors must not depend on the machine's sessions root: a clean
+	// CI runner has no ~/.claude/projects at all, so point the projects
+	// root at a directory that does not exist.
+	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(t.TempDir(), "absent"))
 	err := run(context.Background(), []string{"diff", "only-one"}, &bytes.Buffer{}, &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), "two") {
 		t.Errorf("one id err = %v", err)
