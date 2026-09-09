@@ -7,11 +7,13 @@ package tui
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
 
 	"github.com/SuperMarioYL/tailpin/internal/pin"
 	"github.com/SuperMarioYL/tailpin/internal/transcript"
@@ -150,12 +152,23 @@ func (m Model) claims() []pin.Claim {
 	return m.answer.Claims
 }
 
+// Terminal size assumed when none is known (piped output never receives a
+// WindowSizeMsg); the first real resize overrides it.
+const (
+	defaultWidth  = 80
+	defaultHeight = 24
+)
+
 // View draws the frame: header, then the pinned-answer pane (and the span
 // viewer below it once a claim is opened), then the key hints. The output is
 // truncated to the terminal size so the panes never scroll the screen.
 func (m Model) View() string {
-	if m.width <= 0 || m.height <= 0 {
-		return "loading…"
+	width, height := m.width, m.height
+	if width <= 0 {
+		width = defaultWidth
+	}
+	if height <= 0 {
+		height = defaultHeight
 	}
 	headerLines := 2
 	footerLines := 1
@@ -174,16 +187,16 @@ func (m Model) View() string {
 		if answerHeight < 1 {
 			answerHeight = 1
 		}
-		body = m.answerPane(m.width, answerHeight) + "\n" +
-			m.viewerPane(m.width, spanHeight)
+		body = m.answerPane(width, answerHeight) + "\n" +
+			m.viewerPane(width, spanHeight)
 	} else {
-		body = m.answerPane(m.width, bodyHeight)
+		body = m.answerPane(width, bodyHeight)
 	}
 
-	return m.headerView() + "\n" + body + "\n" + m.footerView()
+	return m.headerView(width) + "\n" + body + "\n" + m.footerView()
 }
 
-func (m Model) headerView() string {
+func (m Model) headerView(width int) string {
 	line1 := titleStyle.Render("tailpin")
 	if m.session != nil {
 		line1 += " · " + shortUUID(m.session.SessionID)
@@ -202,7 +215,7 @@ func (m Model) headerView() string {
 	if m.status != "" {
 		line2 += "  " + errorStyle.Render(m.status)
 	}
-	return line1 + "\n" + truncateLines(line2, m.width)
+	return line1 + "\n" + truncateLines(line2, width)
 }
 
 func (m Model) footerView() string {
@@ -329,12 +342,18 @@ func truncateLines(s string, height int) string {
 }
 
 // RunProgram wires the model into a bubbletea program over one session file
-// with the default append-watch polling.
+// with the default append-watch polling. When stdin is not a terminal, keys
+// are read from stdin instead of /dev/tty, so the TUI can also be driven
+// non-interactively (e.g. printf q | tailpin watch session.jsonl).
 func RunProgram(path string, store *pin.Store) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	watchCh := transcript.Watch(ctx, path, 0)
-	p := tea.NewProgram(New(path, watchCh, store), tea.WithAltScreen())
+	opts := []tea.ProgramOption{tea.WithAltScreen()}
+	if !term.IsTerminal(os.Stdin.Fd()) {
+		opts = append(opts, tea.WithInput(os.Stdin))
+	}
+	p := tea.NewProgram(New(path, watchCh, store), opts...)
 	_, err := p.Run()
 	return err
 }

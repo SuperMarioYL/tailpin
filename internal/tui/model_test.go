@@ -227,6 +227,31 @@ func TestModelUpdatesAnswerAndRevisionOnAppend(t *testing.T) {
 	}
 }
 
+func TestModelViewRendersAtDefaultSizeWithoutWindowSizeMsg(t *testing.T) {
+	// Piped output never delivers a WindowSizeMsg; the view must still render
+	// the answer at the default size instead of a loading placeholder.
+	sess, err := transcript.Load(sampleFixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := pin.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := New(sampleFixture, nil, store)
+	m = update(m, sessionLoadedMsg{session: sess})
+	view := m.View()
+	if strings.Contains(view, "loading…") {
+		t.Errorf("view without window size should render, not stall:\n%s", view)
+	}
+	if !strings.Contains(view, "In summary, the flaky parser test is fixed:") {
+		t.Errorf("view at default size lost the answer:\n%s", view)
+	}
+	if n := len(strings.Split(view, "\n")); n > defaultHeight {
+		t.Errorf("view is %d lines, exceeds default height %d", n, defaultHeight)
+	}
+}
+
 func TestModelNoAnswerWaits(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "empty.jsonl")
