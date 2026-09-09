@@ -1,0 +1,340 @@
+{
+  "schema": 3,
+  "name": "tailpin",
+  "github": "https://github.com/SuperMarioYL/tailpin",
+  "host": "tailpin.lei6393.com",
+  "palette": "auto",
+  "lang": {
+    "primary": "zh",
+    "toggle": true
+  },
+  "meta": {
+    "visual_profile": "neon-particle",
+    "demo_source": "https://github.com/SuperMarioYL/tailpin/blob/main/assets/demo.cast",
+    "content_version": "v0.1.0",
+    "implementation_version": "0.1.0"
+  },
+  "hero": {
+    "eyebrow": {
+      "zh": "开源 · MIT · 严格只读 · 全离线",
+      "en": "Open source · MIT · Read-only · Fully offline"
+    },
+    "headline": {
+      "zh": "把编码 Agent 的最新结论\n钉在终端顶部",
+      "en": "Pin your coding agent's live\nconclusion to the top"
+    },
+    "sub": {
+      "zh": "上万行的长会话里，Agent 的最新结论永远埋在 transcript 尾部。tailpin 把它变成一块实时刷新的置顶答案面板：结论逐条拆分、一键跳回原始记录、跨会话 diff——严格只读，全离线，无 API key。",
+      "en": "In a session that runs to ten thousand lines, the agent's latest conclusion lives only at the transcript's tail. tailpin turns it into a live pinned answer panel: claims split one by one, each jumping back to its raw record, plus a cross-run diff — strictly read-only, fully offline, no API key."
+    },
+    "href": "#quickstart",
+    "command": "tailpin",
+    "cta": {
+      "zh": "开始使用",
+      "en": "Get started"
+    },
+    "ctaGithub": {
+      "zh": "在 GitHub 查看",
+      "en": "View on GitHub"
+    }
+  },
+  "scene": {
+    "kind": "neon-graph",
+    "fallback": "/assets/presentation/scene-dark.svg",
+    "fallbackLight": "/assets/presentation/scene-light.svg",
+    "caption": {
+      "zh": "会话在长，结论置顶",
+      "en": "The session grows; the conclusion stays pinned"
+    }
+  },
+  "advantages": [
+    {
+      "title": {
+        "zh": "答案置顶，实时刷新",
+        "en": "The answer, pinned and live"
+      },
+      "body": {
+        "zh": "结论按 claim 拆分，逐条标注 finding / plan / fix / caveat。会话文件一有追加，面板约 1 秒内重绘（250ms 追加轮询），答案变化时 revision 递增，重启后从磁盘继续累计。",
+        "en": "The conclusion is split into claims, each tagged finding / plan / fix / caveat. Every append redraws the panel within about a second (250ms append-only polling); the revision bumps as the answer changes and continues from disk across restarts."
+      }
+    },
+    {
+      "title": {
+        "zh": "每条结论，一键溯源",
+        "en": "Every claim, one keystroke back"
+      },
+      "body": {
+        "zh": "j/k 在结论间移动，Enter 跳到产生这条结论的原始 transcript 记录——行号、消息 uuid、ISO 8601 时间戳齐全。启发式看走眼时一眼就能看出来，transcript 始终是 ground truth。",
+        "en": "j/k move between claims; Enter jumps to the exact raw transcript record behind one — line, message uuid, ISO 8601 timestamp. A misread heuristic is visible at a glance, and the transcript stays ground truth."
+      }
+    },
+    {
+      "title": {
+        "zh": "严格只读，全离线确定性",
+        "en": "Strictly read-only, deterministic, offline"
+      },
+      "body": {
+        "zh": "抽结论靠启发式打分而不是 LLM：无 API key、无网络请求。tailpin 永远不写 harness 的 transcript，自己写的只有 pin 工件，临时文件 + rename 原子落盘，中途被杀也不会留下半个 JSON。",
+        "en": "Extraction is heuristic scoring, not an LLM: no API key, no network requests. tailpin never writes the harness transcript; the only files it writes are its own pin artifacts, saved atomically via temp file + rename, so a kill mid-write can never leave half a JSON behind."
+      }
+    },
+    {
+      "title": {
+        "zh": "重跑之后，逐条 diff",
+        "en": "After a rerun, a claim-level diff"
+      },
+      "body": {
+        "zh": "同一任务跑两遍，tailpin diff 逐条对比两次运行的结论：哪些新提出、哪些被推翻、哪些改了措辞。没有 watch 过的历史会话也可以直接 diff（现场抽取）。",
+        "en": "Run the same task twice and tailpin diff compares the two runs claim by claim: newly claimed, dropped, reworded. Past sessions you never watched can still be diffed, extracted on the spot."
+      }
+    }
+  ],
+  "story": {
+    "intro": {
+      "title": {
+        "zh": "上万行会话，你只想读最后十行",
+        "en": "Ten thousand lines in, you only want the last ten"
+      },
+      "body": {
+        "zh": "Claude Code 的长会话动辄上万行，Agent 的最新结论永远埋在 transcript 尾部；本地长思考模型上的 Opencode 会话，还把结论埋进长长的思考流里。跑一次四十分钟的任务，你真正想读的可能只有最后十行。tailpin 把这十行变成一块实时更新的置顶答案面板。它和 prompt skill 是互补而不是竞争：caveman、i-have-adhd 这类 skill 改变 Agent 怎么说，tailpin 改变你看哪里。",
+        "en": "A Claude Code session runs to ten thousand lines and its latest conclusion lives only at the transcript's tail; on local long-reasoning models the conclusion sits inside a long thinking stream on top of that. A forty-minute task may have ten lines you actually want to read. tailpin turns those ten lines into a live pinned answer panel. It composes with prompt skills rather than competing: caveman-style skills change how the agent talks; tailpin changes where you look."
+      }
+    },
+    "sections": [
+      {
+        "title": {
+          "zh": "从追加到置顶：一秒内的更新链路",
+          "en": "From append to pin: the one-second loop"
+        },
+        "body": {
+          "zh": "tailpin 以 250ms 追加轮询只读跟踪会话文件：新记录一到，adapter 按类型过滤出 assistant 文本块（mode、queue-operation、file-history-snapshot 等记录直接跳过），extractor 用时近性、中英文结论标记、代码块和路径做确定性打分选出当前答案并拆成 claim，store 把带版本的 pin 工件原子落盘到 ~/.tailpin/sessions/<session_id>.pin.json，TUI 与 --plain 面板随之重绘。",
+          "en": "tailpin follows the session file read-only with 250ms append-only polling: as records arrive, the adapter lifts assistant text spans by type (mode, queue-operation, file-history-snapshot records are skipped), the extractor deterministically ranks spans by recency, EN/ZH conclusion markers, code blocks and file paths, splits the answer into claims, the store atomically writes the revisioned pin artifact to ~/.tailpin/sessions/<session_id>.pin.json, and the TUI and --plain panel redraw."
+        },
+        "image": {
+          "light": "/assets/presentation/workflow-light.svg",
+          "dark": "/assets/presentation/workflow-dark.svg",
+          "alt": {
+            "zh": "更新链路：追加轮询、按类型过滤、确定性打分、原子落盘、面板重绘",
+            "en": "The update loop: append polling, type filtering, deterministic ranking, atomic store, panel redraw"
+          },
+          "mobile": {
+            "light": "/assets/presentation/workflow-mobile-light.svg",
+            "dark": "/assets/presentation/workflow-mobile-dark.svg"
+          }
+        }
+      },
+      {
+        "title": {
+          "zh": "一个 Go 二进制，四个内部包，零模型调用",
+          "en": "One Go binary, four internal packages, zero model calls"
+        },
+        "body": {
+          "zh": "transcript adapter 只认识 Claude-Code 风格 JSONL 这一种方言（消息记录、uuid、ISO 8601 时间戳）；pin extractor 负责确定性打分，把答案拆成带 span 溯源的 claim；pin store 原子保存 PinnedAnswer { session_id, revision, updated_at, confidence, claims[] }，每个 Claim 带 finding / plan / fix / caveat 类型与行号、字节区间、消息 uuid、时间戳；bubbletea TUI 呈现答案面板与溯源视图，diff 走 CLI 输出。支持别的 transcript 格式意味着写一个新 adapter，而不是到处改代码。",
+          "en": "The transcript adapter knows exactly one dialect, Claude-Code-style JSONL (message records, uuids, ISO 8601 timestamps); the pin extractor does the deterministic ranking and splits the answer into claims with span provenance; the pin store atomically saves PinnedAnswer { session_id, revision, updated_at, confidence, claims[] }, each Claim carrying a finding / plan / fix / caveat kind plus line range, byte range, message uuid and timestamp; the bubbletea TUI renders the answer pane and span viewer, and diff is plain CLI output. Supporting another transcript format means writing a new adapter, not touching the rest of the code."
+        },
+        "image": {
+          "light": "/assets/presentation/architecture-light.svg",
+          "dark": "/assets/presentation/architecture-dark.svg",
+          "alt": {
+            "zh": "架构：adapter、extractor、store、TUI 四层，结论工件单独落盘",
+            "en": "Architecture: adapter, extractor, store and TUI layers, with the pinned answer as its own artifact"
+          },
+          "mobile": {
+            "light": "/assets/presentation/architecture-mobile-light.svg",
+            "dark": "/assets/presentation/architecture-mobile-dark.svg"
+          }
+        }
+      },
+      {
+        "title": {
+          "zh": "今天能接什么",
+          "en": "What plugs in today"
+        },
+        "body": {
+          "zh": "裸 tailpin 自动选中 ~/.claude/projects 下最新活跃的会话（嵌套的 subagent / journal 文件不参与发现）；tailpin watch 接任何 Claude-Code 风格 JSONL 文件——Opencode 等写出同方言的会话同样适用。CLAUDE_CONFIG_DIR 环境变量覆盖 harness 配置目录。安装走 go install（Go 1.24+），或从 Releases 下载 macOS / Linux / Windows 二进制（每个版本附带 sha256 校验和）。",
+          "en": "Bare tailpin auto-picks the most recently active session under ~/.claude/projects (nested subagent / journal files never surface); tailpin watch accepts any Claude-Code-style JSONL file — sessions written by Opencode and other harnesses speaking the same dialect work the same way. The CLAUDE_CONFIG_DIR environment variable overrides the harness config directory. Install via go install (Go 1.24+) or grab macOS / Linux / Windows binaries from Releases, each version shipping sha256 checksums."
+        },
+        "image": {
+          "light": "/assets/presentation/integrations-light.svg",
+          "dark": "/assets/presentation/integrations-dark.svg",
+          "alt": {
+            "zh": "当前接入：Claude Code 会话目录、任意同方言 JSONL、CLAUDE_CONFIG_DIR 覆盖、 Releases 二进制",
+            "en": "What plugs in today: the Claude Code projects root, any same-dialect JSONL file, CLAUDE_CONFIG_DIR override, Release binaries"
+          },
+          "mobile": {
+            "light": "/assets/presentation/integrations-mobile-light.svg",
+            "dark": "/assets/presentation/integrations-mobile-dark.svg"
+          }
+        }
+      }
+    ],
+    "details": [
+      {
+        "title": {
+          "zh": "命令与按键",
+          "en": "Commands and keys"
+        },
+        "body": {
+          "zh": "tailpin 自动发现最新活跃会话并进入 TUI；watch 盯指定文件，--plain 输出无 TUI 的纯文本实时面板（适合管道与无交互终端）；diff 无参数时对比同项目最新两个会话，diff <idA> <idB> 显式指定。j/k 在结论间移动（溯源视图打开时滚动视图），Enter 打开当前结论的原始记录，esc 返回，q 退出；tailpin help / tailpin version 查看帮助与版本。",
+          "en": "tailpin auto-discovers the latest active session and opens the TUI; watch follows a specific file, with --plain streaming the live panel without the TUI (pipes and non-interactive terminals); diff with no arguments compares the newest session against the previous one in the same project, and diff <idA> <idB> picks both explicitly. j/k move between claims (scrolling the span viewer once open), Enter opens the raw record behind the selected claim, esc goes back, q quits; tailpin help / tailpin version print help and version."
+        },
+        "code": "tailpin\ntailpin watch path/to/session.jsonl\ntailpin watch path/to/session.jsonl --plain\ntailpin diff\ntailpin diff run-a run-b\ntailpin help"
+      },
+      {
+        "title": {
+          "zh": "配置与行为细节",
+          "en": "Configuration and behavior"
+        },
+        "body": {
+          "zh": "唯一的配置是环境变量 CLAUDE_CONFIG_DIR（默认 ~/.claude，projects 根目录随之变为 <dir>/projects）。pin 工件落在 ~/.tailpin/sessions/<session_id>.pin.json；diff 优先读已存工件，没有 watch 过的历史会话现场抽取。v0.1 刻意收窄的边界见下方「接入前需要知道」。",
+          "en": "The only configuration is the CLAUDE_CONFIG_DIR environment variable (default ~/.claude; the projects root becomes <dir>/projects). Pin artifacts land in ~/.tailpin/sessions/<session_id>.pin.json; diff prefers stored artifacts and extracts on the spot for sessions you never watched. The deliberately narrow v0.1 boundaries are listed below under Before you integrate."
+        },
+        "code": "CLAUDE_CONFIG_DIR=. tailpin diff run-a run-b"
+      }
+    ]
+  },
+  "demo": {
+    "title": {
+      "zh": "真实演示",
+      "en": "Recorded demo"
+    },
+    "note": {
+      "zh": "以下命令与输出逐字复制自仓库自带示例会话（examples/projects/-Users-dev-work-api-server/）上的真实运行；仓库内还有一段 26 秒的 asciinema v2 实况录制，覆盖同样的三个动作。",
+      "en": "Commands and outputs below are copied verbatim from real runs over the example sessions bundled in the repo (examples/projects/-Users-dev-work-api-server/); the repo also ships a real 26-second asciinema v2 recording covering the same three moves."
+    },
+    "source": "https://github.com/SuperMarioYL/tailpin/blob/main/assets/demo.cast",
+    "steps": [
+      {
+        "label": {
+          "zh": "--plain 实时面板",
+          "en": "--plain live panel"
+        },
+        "body": {
+          "zh": "无 TUI 的纯文本面板：答案立即置顶，每条结论带 L20 行号溯源，会话追加后约 1 秒内刷新。",
+          "en": "The plain-text panel without the TUI: the answer pins immediately, each claim tagged with its L20 provenance, refreshing within about a second of each append."
+        },
+        "image": "/assets/presentation/demo-plain-light.svg",
+        "imageDark": "/assets/presentation/demo-plain-dark.svg",
+        "command": "tailpin watch examples/projects/-Users-dev-work-api-server/run-b.jsonl --plain",
+        "output": "tailpin · d8e9f0a1-2222-4bbb-8ccc-000000000002 · rev 1 · high\nexamples/projects/-Users-dev-work-api-server/run-b.jsonl\n\n  L20     In summary, the flaky parser test is fixed for good:\n  L20     Root cause: CountTokens in internal/parser/parser.go double-counted the trailing newline via the i == len(s) sentinel iteration.\n  L20     Fix: corrected the loop boundary at parser.go:41 and added a regression case to parser_test.go.\n  L20     Verified: go test ./... passes, 214/214.\n  L20     Caveat: the config loader refactor is still pending.\n"
+      },
+      {
+        "label": {
+          "zh": "TUI 答案面板",
+          "en": "TUI answer pane"
+        },
+        "body": {
+          "zh": "❯ 标记当前选中，每条结论下带「行号 · uuid · 时间戳」溯源。",
+          "en": "❯ marks the selection; every claim carries line · uuid · timestamp provenance."
+        },
+        "image": "/assets/presentation/demo-tui-light.svg",
+        "imageDark": "/assets/presentation/demo-tui-dark.svg",
+        "command": "tailpin watch examples/projects/-Users-dev-work-api-server/run-b.jsonl",
+        "output": "tailpin · d8e9f0a1 · rev 1 · high · 20:34:21\nexamples/projects/-Users-dev-work-api-server/run-b.jsonl\n❯ [fix]    In summary, the flaky parser test is fixed for good:\n           L20 · d8e9f0a1 · 2026-09-08T10:04:40.003Z\n  [finding] Root cause: CountTokens in internal/parser/parser.go double-counted the trailing newline via the i == len(s) sentinel iteration.\n            L20 · d8e9f0a1 · 2026-09-08T10:04:40.003Z\n  [fix]     Fix: corrected the loop boundary at parser.go:41 and added a regression case to parser_test.go.\n            L20 · d8e9f0a1 · 2026-09-08T10:04:40.003Z\n  [finding] Verified: go test ./... passes, 214/214.\n            L20 · d8e9f0a1 · 2026-09-08T10:04:40.003Z\n  [caveat]  Caveat: the config loader refactor is still pending.\n            L20 · d8e9f0a1 · 2026-09-08T10:04:40.003Z\nj/k claims · enter span · q quit\n"
+      },
+      {
+        "label": {
+          "zh": "Enter 跳回原始记录",
+          "en": "Enter jumps to the raw record"
+        },
+        "body": {
+          "zh": "对选中的结论按 Enter，打开产生它的原始 transcript 段落：产生记录高亮，… 表示按终端宽度截断。",
+          "en": "Enter on a claim opens the raw transcript span that produced it: the producing record is highlighted, … marks sides cut to terminal width."
+        },
+        "image": "/assets/presentation/demo-span-light.svg",
+        "imageDark": "/assets/presentation/demo-span-dark.svg",
+        "command": "tailpin watch examples/projects/-Users-dev-work-api-server/run-b.jsonl  # j/k + enter on a claim",
+        "output": "── span ───────────────────────────────────────────────────────────────────────────────────────────────────────────\nclaim: Root cause: CountTokens in internal/parser/parser.go double-counted the trailing newline via the i == len(s) sentinel iteration.\nL20 · d8e9f0a1 · 2026-09-08T10:04:40.003Z\n 12 {\"type\":\"custom-title\",\"customTitle\":\"fix flaky CountTokens test for good\",\"sessionId\":\"d8e9f0a1-2222-4bbb-8ccc-000000000002\"}\n 13 {\"type\":\"assistant\",\"uuid\":\"d8e9f0a1-0000-4000-8000-000000000009\",\"parentUuid\":\"d8e9f0a1-0000-4000-8000-000000000007\",\"sessionId\":\"d8e…\n 14 {\"type\":\"assistant\",\"uuid\":\"d8e9f0a1-0000-4000-8000-000000000010\",\"parentUuid\":\"d8e9f0a1-0000-4000-8000-000000000009\",\"sessionId\":\"d8e…\n 15 {\"type\":\"assistant\",\"uuid\":\"d8e9f0a1-0000-4000-8000-000000000011\",\"parentUuid\":\"d8e9f0a1-0000-4000-8000-000000000010\",\"sessionId\":\"d8e…\n 16 {\"type\":\"user\",\"uuid\":\"b8c1d2e3-0000-4000-8000-000000000012\",\"parentUuid\":\"d8e9f0a1-0000-4000-8000-000000000011\",\"sessionId\":\"d8e…\n 17 {\"type\":\"system\",\"parentUuid\":\"b8c1d2e3-0000-4000-8000-000000000012\",\"isSidechain\":false,\"subtype\":\"stop_hook_summary\",\"hookCount\":1,\"…\n 18 {\"type\":\"assistant\",\"uuid\":\"d8e9f0a1-0000-4000-8000-000000000013\",\"parentUuid\":\"b8c1d2e3-0000-4000-8000-000000000012\",\"sessionId\":\"d8e…\n 19 {\"type\":\"last-prompt\",\"lastPrompt\":\"run the full parser test suite when done\",\"leafUuid\":\"d8e9f0a1-0000-4000-8000-000000000013\",\"sessi…\n 20 …rser test is fixed for good:\\n\\n- Root cause: CountTokens in internal/parser/parser.go double-counted the trailing newline via the i =…\nj/k scroll · esc back · q quit\n"
+      },
+      {
+        "label": {
+          "zh": "跨会话 diff",
+          "en": "Cross-run diff"
+        },
+        "body": {
+          "zh": "同一任务两次运行，结论逐条对比：哪些改了措辞、哪些新提出、哪些被推翻。",
+          "en": "The same task run twice, claims compared one by one: reworded, newly claimed, dropped."
+        },
+        "image": "/assets/presentation/demo-diff-light.svg",
+        "imageDark": "/assets/presentation/demo-diff-dark.svg",
+        "command": "CLAUDE_CONFIG_DIR=. tailpin diff run-a run-b",
+        "output": "run-a -> run-b\n~ changed  [finding]  Verified: go test ./... passes, 214/214.\n  was:      Verified: go test ./... passes locally, 214/214.\n+ added    [fix]     In summary, the flaky parser test is fixed for good:\n+ added    [finding]  Root cause: CountTokens in internal/parser/parser.go double-counted the trailing newline via the i == len(s) sentinel iteration.\n+ added    [fix]     Fix: corrected the loop boundary at parser.go:41 and added a regression case to parser_test.go.\n- removed  [finding]  Summary of the first investigation:\n- removed  [finding]  Root cause: the test shares mutable parser state with TestCountTokensBasic and only flakes when the two run back to back.\n- removed  [fix]     Fix: added a warm-cache guard that skips the test when the shared state is dirty.\n  1 claims unchanged\n"
+      }
+    ]
+  },
+  "quickstart": {
+    "title": {
+      "zh": "从安装到置顶面板",
+      "en": "From install to a pinned panel"
+    },
+    "body": {
+      "zh": "需要 Go 1.24+，或从 Releases 下载 macOS / Linux / Windows 二进制（每个版本附带 sha256 校验和）。仓库自带两条示例会话，不需要装 Claude Code 就能跑通全流程。",
+      "en": "Requires Go 1.24+, or grab a macOS / Linux / Windows binary from Releases (every version ships with sha256 checksums). The two example sessions bundled in the repo walk the whole flow without Claude Code installed."
+    },
+    "steps": [
+      {
+        "title": {
+          "zh": "安装",
+          "en": "Install"
+        },
+        "code": "go install github.com/SuperMarioYL/tailpin@latest"
+      },
+      {
+        "title": {
+          "zh": "跑通示例会话",
+          "en": "Walk the bundled examples"
+        },
+        "code": "git clone https://github.com/SuperMarioYL/tailpin.git\ncd tailpin/examples\n\n# plain panel: the answer pins immediately, each claim with L20 provenance\ntailpin watch projects/-Users-dev-work-api-server/run-b.jsonl --plain\n\n# TUI: j/k between claims · enter jumps to the raw record · esc back · q quit\ntailpin watch projects/-Users-dev-work-api-server/run-b.jsonl\n\n# cross-run diff: same task run twice, claims compared one by one\nCLAUDE_CONFIG_DIR=. tailpin diff run-a run-b"
+      },
+      {
+        "title": {
+          "zh": "挂上真实会话",
+          "en": "Pin a real session"
+        },
+        "code": "tailpin                              # auto-discover the latest session (TUI)\ntailpin watch path/to/session.jsonl  # any Claude-Code-style JSONL file"
+      }
+    ]
+  },
+  "limitations": [
+    {
+      "zh": "只读观察：mid-run 的 accept / annotate 是 v0.2 候选，前提是先验证真的有人把 tailpin 挂在长会话旁边用。",
+      "en": "Read-only observability: mid-run accept / annotate is a v0.2 candidate, gated on evidence that people actually keep tailpin open beside long runs."
+    },
+    {
+      "zh": "只支持 Claude-Code 风格 JSONL 一种 transcript 方言；支持别的格式意味着写一个新 adapter，而不是到处改代码。",
+      "en": "One transcript dialect only, Claude-Code-style JSONL; supporting another format means writing a new adapter, not touching the rest of the code."
+    },
+    {
+      "zh": "一个 tailpin 进程看一个会话；没有 Web UI、没有推送通知、不做记忆回注。",
+      "en": "One session per tailpin process; no web UI, no push notifications, no memory reinjection."
+    },
+    {
+      "zh": "启发式打分会看走眼：每条结论都带溯源，选错了一眼就能看出来，transcript 始终是 ground truth。",
+      "en": "Heuristic scoring can misread: every claim carries provenance, a wrong pick is visible at a glance, and the transcript stays ground truth."
+    },
+    {
+      "zh": "Windows 二进制随 release 一起构建，但在 Windows 上未经测试。",
+      "en": "Windows binaries are built with each release but untested on Windows."
+    }
+  ],
+  "cta": {
+    "headline": {
+      "zh": "让 Agent 继续跑，结论始终在你眼前",
+      "en": "Let the agent run; the conclusion stays in view"
+    },
+    "sub": {
+      "zh": "免费开源（MIT）· 无 API key · 无配置",
+      "en": "Free and open source (MIT) · no API key · no config"
+    },
+    "button": {
+      "zh": "在 GitHub 上开始",
+      "en": "Get started on GitHub"
+    }
+  },
+  "footer": {
+    "tag": {
+      "zh": "只读、离线、确定性——transcript 永远是 ground truth。",
+      "en": "Read-only, offline, deterministic — the transcript stays ground truth."
+    }
+  }
+}

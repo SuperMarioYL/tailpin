@@ -1,0 +1,21 @@
+# Deploy the tailpin product site (web/site.json + web/assets) to GitHub Pages
+# through the central web-factory renderer, pinned to a tested commit.
+# Prereq: repo settings → Pages → Source: "GitHub Actions".
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  site:
+    uses: SuperMarioYL/web-factory/.github/workflows/build-site.yml@03e7ec8a416f868b847d13b3023bf7d1215db767
+    with:
+      factory_ref: 03e7ec8a416f868b847d13b3023bf7d1215db767

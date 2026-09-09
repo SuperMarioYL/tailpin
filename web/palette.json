@@ -1,0 +1,38 @@
+{
+  "mode": "auto",
+  "id": "5956e6-af6ae7-acc6f6-ab1706e61153",
+  "identity": "https://github.com/supermarioyl/tailpin",
+  "primary": "#5956e6",
+  "secondary": "#af6ae7",
+  "highlight": "#acc6f6",
+  "dark": {
+    "bg": "#050712",
+    "panel": "#0c101f",
+    "code": "#0a0d1d",
+    "ink": "#eef4fd",
+    "muted": "#969cc4",
+    "line": "#171841",
+    "primary": "#6f6ce9",
+    "secondary": "#af6ae7",
+    "highlight": "#acc6f6",
+    "accent": "#6f6ce9",
+    "buttonStart": "#5956e6",
+    "buttonEnd": "#975bc7",
+    "buttonText": "#ffffff"
+  },
+  "light": {
+    "bg": "#f9f9fe",
+    "panel": "#f7f7fe",
+    "code": "#f3f3fd",
+    "ink": "#131630",
+    "muted": "#565e88",
+    "line": "#cccbf7",
+    "primary": "#5956e6",
+    "secondary": "#8f56bc",
+    "highlight": "#62708c",
+    "accent": "#5956e6",
+    "buttonStart": "#5956e6",
+    "buttonEnd": "#975bc7",
+    "buttonText": "#ffffff"
+  }
+}
