@@ -172,7 +172,7 @@ func (m Model) View() string {
 	}
 	headerLines := 2
 	footerLines := 1
-	bodyHeight := m.height - headerLines - footerLines
+	bodyHeight := height - headerLines - footerLines
 	if bodyHeight < 1 {
 		bodyHeight = 1
 	}
